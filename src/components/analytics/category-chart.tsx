@@ -25,6 +25,7 @@ interface CategoryChartProps {
 
 interface CategoryData {
   name: string
+  fullName: string
   amount: number
   percentage: number
   color: string
@@ -109,7 +110,8 @@ export function CategoryChart({ startDate, endDate }: CategoryChartProps) {
 
         return Array.from(categoryMap.entries())
           .map(([name, data], index) => ({
-            name,
+            name: name.length > 10 ? name.substring(0, 10) + '...' : name,
+            fullName: name,
             amount: data.amount,
             percentage: totalAmount > 0 ? Math.round((data.amount / totalAmount) * 100) : 0,
             color: COLORS[index % COLORS.length],
@@ -136,7 +138,7 @@ export function CategoryChart({ startDate, endDate }: CategoryChartProps) {
       const data = payload[0].payload
       return (
         <div className="bg-background border rounded-lg p-3 shadow-lg">
-          <p className="font-medium">{data.name}</p>
+          <p className="font-medium">{data.fullName || data.name}</p>
           <p className="text-sm text-muted-foreground">
             {formatCurrency(data.amount)} ({data.percentage}%)
           </p>
@@ -202,11 +204,17 @@ export function CategoryChart({ startDate, endDate }: CategoryChartProps) {
               <CardContent>
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={expenseData} layout="horizontal">
+                    <BarChart 
+                      data={expenseData} 
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" tickFormatter={formatCurrency} />
-                      <YAxis dataKey="name" type="category" width={80} />
-                      <Tooltip formatter={(value: number) => [formatCurrency(value), '支出額']} />
+                      <XAxis dataKey="name" />
+                      <YAxis tickFormatter={formatCurrency} />
+                      <Tooltip 
+                        formatter={(value: number) => [formatCurrency(value), '支出額']}
+                        labelStyle={{ color: '#000' }}
+                      />
                       <Bar dataKey="amount" fill="#ef4444" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -262,11 +270,17 @@ export function CategoryChart({ startDate, endDate }: CategoryChartProps) {
               <CardContent>
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={incomeData} layout="horizontal">
+                    <BarChart 
+                      data={incomeData} 
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" tickFormatter={formatCurrency} />
-                      <YAxis dataKey="name" type="category" width={80} />
-                      <Tooltip formatter={(value: number) => [formatCurrency(value), '収入額']} />
+                      <XAxis dataKey="name" />
+                      <YAxis tickFormatter={formatCurrency} />
+                      <Tooltip 
+                        formatter={(value: number) => [formatCurrency(value), '収入額']}
+                        labelStyle={{ color: '#000' }}
+                      />
                       <Bar dataKey="amount" fill="#22c55e" />
                     </BarChart>
                   </ResponsiveContainer>
