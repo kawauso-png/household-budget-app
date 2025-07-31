@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { TransactionType, Category, Subcategory, Transaction } from '@/lib/types'
+import { TransactionType, Category, Transaction } from '@/lib/types'
 
 interface TransactionFormProps {
   onSuccess?: () => void
@@ -35,11 +35,9 @@ export function TransactionForm({
   const [taxType, setTaxType] = useState<TaxType>('tax_included')
   const [finalAmount, setFinalAmount] = useState(editTransaction ? editTransaction.amount.toString() : '')
   const [categoryId, setCategoryId] = useState(editTransaction?.category_id || '')
-  const [subcategoryId, setSubcategoryId] = useState(editTransaction?.subcategory_id || '')
   const [date, setDate] = useState(editTransaction ? editTransaction.date : format(new Date(), 'yyyy-MM-dd'))
   const [description, setDescription] = useState(editTransaction?.description || '')
   const [categories, setCategories] = useState<Category[]>([])
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
@@ -49,14 +47,6 @@ export function TransactionForm({
     fetchCategories()
   }, [type])
 
-  useEffect(() => {
-    if (categoryId) {
-      fetchSubcategories(categoryId)
-    } else {
-      setSubcategories([])
-      setSubcategoryId('')
-    }
-  }, [categoryId])
 
   useEffect(() => {
     calculateFinalAmount()
@@ -76,19 +66,6 @@ export function TransactionForm({
     }
   }
 
-  const fetchSubcategories = async (selectedCategoryId: string) => {
-    const { data, error } = await supabase
-      .from('subcategories')
-      .select('*')
-      .eq('category_id', selectedCategoryId)
-      .order('name')
-
-    if (error) {
-      console.error('Error fetching subcategories:', error)
-    } else {
-      setSubcategories(data || [])
-    }
-  }
 
   const calculateFinalAmount = () => {
     const base = parseFloat(baseAmount) || 0
@@ -113,10 +90,6 @@ export function TransactionForm({
   }
 
 
-  const handleCategoryChange = (value: string) => {
-    setCategoryId(value)
-    setSubcategoryId('') // カテゴリが変わったらサブカテゴリをリセット
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -148,7 +121,6 @@ export function TransactionForm({
             type,
             amount: parseFloat(finalAmount),
             category_id: categoryId,
-            subcategory_id: (!subcategoryId || subcategoryId === 'none') ? null : subcategoryId,
             date,
             description: description || null,
           })
@@ -161,7 +133,6 @@ export function TransactionForm({
           type,
           amount: parseFloat(finalAmount),
           category_id: categoryId,
-          subcategory_id: subcategoryId || null,
           date,
           description: description || null,
         })
@@ -173,7 +144,6 @@ export function TransactionForm({
         setFinalAmount('')
         setTaxType('tax_included')
         setCategoryId('')
-        setSubcategoryId('')
         setDescription('')
         setDate(format(new Date(), 'yyyy-MM-dd'))
       }
@@ -273,7 +243,7 @@ export function TransactionForm({
       <div className="space-y-2">
         <Label htmlFor="category">カテゴリ *</Label>
         <div className="space-y-2">
-          <Select value={categoryId} onValueChange={handleCategoryChange}>
+          <Select value={categoryId} onValueChange={setCategoryId}>
             <SelectTrigger id="category">
               <SelectValue placeholder="カテゴリを選択してください" />
             </SelectTrigger>
@@ -288,26 +258,6 @@ export function TransactionForm({
         </div>
       </div>
 
-      {categoryId && (
-        <div className="space-y-2">
-          <Label htmlFor="subcategory">サブカテゴリ</Label>
-          <div className="space-y-2">
-            <Select value={subcategoryId || "none"} onValueChange={(value) => setSubcategoryId(value === "none" ? "" : value)}>
-              <SelectTrigger id="subcategory">
-                <SelectValue placeholder="サブカテゴリを選択（任意）" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">なし</SelectItem>
-                {subcategories.map((subcategory) => (
-                  <SelectItem key={subcategory.id} value={subcategory.id}>
-                    {subcategory.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      )}
 
       <div className="space-y-2">
         <Label htmlFor="date">日付</Label>
