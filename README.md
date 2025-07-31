@@ -47,4 +47,4 @@ npm run dev
 - **フロントエンド**: Next.js 15, React 19, TypeScript
 - **スタイリング**: Tailwind CSS
 - **バックエンド**: Supabase (認証, データベース, ストレージ)
-- **データベース**: PostgreSQL 
+- **データベース**: PostgreSQL # Updated
