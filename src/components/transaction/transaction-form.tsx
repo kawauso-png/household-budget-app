@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { TransactionType, Category } from '@/lib/types'
+import { TransactionType, Category, Transaction } from '@/lib/types'
 import { Plus, X } from 'lucide-react'
 
 interface TransactionFormProps {
