@@ -36,7 +36,7 @@ export function TransactionForm({
   const [taxType, setTaxType] = useState<TaxType>('tax_included')
   const [finalAmount, setFinalAmount] = useState(editTransaction ? editTransaction.amount.toString() : '')
   const [categoryId, setCategoryId] = useState(editTransaction?.category_id || '')
-  const [subcategoryId, setSubcategoryId] = useState(editTransaction?.subcategory_id || '')
+  const [subcategoryId, setSubcategoryId] = useState(editTransaction?.subcategory_id || 'none')
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newSubcategoryName, setNewSubcategoryName] = useState('')
   const [showNewCategory, setShowNewCategory] = useState(false)
@@ -188,7 +188,7 @@ export function TransactionForm({
 
   const handleCategoryChange = (value: string) => {
     setCategoryId(value)
-    setSubcategoryId('') // カテゴリが変わったらサブカテゴリをリセット
+    setSubcategoryId('none') // カテゴリが変わったらサブカテゴリをリセット
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -246,14 +246,23 @@ export function TransactionForm({
         setFinalAmount('')
         setTaxType('tax_included')
         setCategoryId('')
-        setSubcategoryId('')
+        setSubcategoryId('none')
         setDescription('')
         setDate(format(new Date(), 'yyyy-MM-dd'))
       }
       
       onSuccess?.()
     } catch (err) {
-      setError(err instanceof Error ? err.message : '保存に失敗しました')
+      console.error('Transaction save error:', err)
+      if (err instanceof Error) {
+        if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+          setError('ネットワークエラー: インターネット接続を確認してください')
+        } else {
+          setError(err.message)
+        }
+      } else {
+        setError('保存に失敗しました。もう一度お試しください。')
+      }
     } finally {
       setLoading(false)
     }
