@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Home, FileText, LogOut, Plus, Tag } from 'lucide-react'
+import { Home, FileText, LogOut, Plus, Tag, BarChart3 } from 'lucide-react'
 
 export function Navigation() {
   const pathname = usePathname()
@@ -19,6 +19,7 @@ export function Navigation() {
   const navItems = [
     { href: '/dashboard', icon: Home, label: 'ダッシュボード' },
     { href: '/transactions', icon: Plus, label: '入力' },
+    { href: '/analytics', icon: BarChart3, label: '分析' },
     { href: '/reports', icon: FileText, label: 'レポート' },
     { href: '/categories', icon: Tag, label: 'カテゴリ' },
   ]
