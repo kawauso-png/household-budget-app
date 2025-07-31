@@ -12,10 +12,21 @@ export interface Category {
   updated_at: string
 }
 
+export interface Subcategory {
+  id: string
+  user_id: string
+  category_id: string
+  name: string
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface Transaction {
   id: string
   user_id: string
   category_id: string | null
+  subcategory_id?: string | null
   type: TransactionType
   amount: number
   date: string
@@ -23,6 +34,7 @@ export interface Transaction {
   created_at: string
   updated_at: string
   category?: Category
+  subcategory?: Subcategory
 }
 
 export interface Profile {
