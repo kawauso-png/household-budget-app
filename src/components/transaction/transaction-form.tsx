@@ -221,7 +221,7 @@ export function TransactionForm({
             type,
             amount: parseFloat(finalAmount),
             category_id: categoryId,
-            subcategory_id: subcategoryId || null,
+            subcategory_id: subcategoryId === 'none' ? null : subcategoryId || null,
             date,
             description: description || null,
           })
@@ -407,7 +407,7 @@ export function TransactionForm({
                 <SelectValue placeholder="サブカテゴリを選択（任意）" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">なし</SelectItem>
+                <SelectItem value="none">なし</SelectItem>
                 {subcategories.map((subcategory) => (
                   <SelectItem key={subcategory.id} value={subcategory.id}>
                     {subcategory.name}
