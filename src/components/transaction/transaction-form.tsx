@@ -14,7 +14,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { TransactionType, Category, Subcategory, Transaction } from '@/lib/types'
-import { Plus, X } from 'lucide-react'
 
 interface TransactionFormProps {
   onSuccess?: () => void
@@ -36,11 +35,7 @@ export function TransactionForm({
   const [taxType, setTaxType] = useState<TaxType>('tax_included')
   const [finalAmount, setFinalAmount] = useState(editTransaction ? editTransaction.amount.toString() : '')
   const [categoryId, setCategoryId] = useState(editTransaction?.category_id || '')
-  const [subcategoryId, setSubcategoryId] = useState(editTransaction?.subcategory_id || 'none')
-  const [newCategoryName, setNewCategoryName] = useState('')
-  const [newSubcategoryName, setNewSubcategoryName] = useState('')
-  const [showNewCategory, setShowNewCategory] = useState(false)
-  const [showNewSubcategory, setShowNewSubcategory] = useState(false)
+  const [subcategoryId, setSubcategoryId] = useState(editTransaction?.subcategory_id || '')
   const [date, setDate] = useState(editTransaction ? editTransaction.date : format(new Date(), 'yyyy-MM-dd'))
   const [description, setDescription] = useState(editTransaction?.description || '')
   const [categories, setCategories] = useState<Category[]>([])
@@ -117,78 +112,10 @@ export function TransactionForm({
     setFinalAmount(final.toString())
   }
 
-  const createNewCategory = async () => {
-    if (!newCategoryName.trim()) {
-      setError('カテゴリ名を入力してください')
-      return
-    }
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('ユーザーが見つかりません')
-
-      const { data, error } = await supabase
-        .from('categories')
-        .insert({
-          user_id: user.id,
-          name: newCategoryName.trim(),
-          type,
-          is_default: false,
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      await fetchCategories()
-      setCategoryId(data.id)
-      setNewCategoryName('')
-      setShowNewCategory(false)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'カテゴリの作成に失敗しました')
-    }
-  }
-
-  const createNewSubcategory = async () => {
-    if (!newSubcategoryName.trim()) {
-      setError('サブカテゴリ名を入力してください')
-      return
-    }
-
-    if (!categoryId) {
-      setError('先にカテゴリを選択してください')
-      return
-    }
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('ユーザーが見つかりません')
-
-      const { data, error } = await supabase
-        .from('subcategories')
-        .insert({
-          user_id: user.id,
-          category_id: categoryId,
-          name: newSubcategoryName.trim(),
-          is_default: false,
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      await fetchSubcategories(categoryId)
-      setSubcategoryId(data.id)
-      setNewSubcategoryName('')
-      setShowNewSubcategory(false)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'サブカテゴリの作成に失敗しました')
-    }
-  }
 
   const handleCategoryChange = (value: string) => {
     setCategoryId(value)
-    setSubcategoryId('none') // カテゴリが変わったらサブカテゴリをリセット
+    setSubcategoryId('') // カテゴリが変わったらサブカテゴリをリセット
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -221,7 +148,7 @@ export function TransactionForm({
             type,
             amount: parseFloat(finalAmount),
             category_id: categoryId,
-            subcategory_id: subcategoryId === 'none' ? null : subcategoryId || null,
+            subcategory_id: (!subcategoryId || subcategoryId === 'none') ? null : subcategoryId,
             date,
             description: description || null,
           })
@@ -246,7 +173,7 @@ export function TransactionForm({
         setFinalAmount('')
         setTaxType('tax_included')
         setCategoryId('')
-        setSubcategoryId('none')
+        setSubcategoryId('')
         setDescription('')
         setDate(format(new Date(), 'yyyy-MM-dd'))
       }
@@ -358,52 +285,6 @@ export function TransactionForm({
               ))}
             </SelectContent>
           </Select>
-          
-          {!showNewCategory ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowNewCategory(true)}
-              className="w-full gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              新しいカテゴリを追加
-            </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Input
-                placeholder="新しいカテゴリ名"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    createNewCategory()
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                size="sm"
-                onClick={createNewCategory}
-                disabled={!newCategoryName.trim()}
-              >
-                追加
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setShowNewCategory(false)
-                  setNewCategoryName('')
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -411,7 +292,7 @@ export function TransactionForm({
         <div className="space-y-2">
           <Label htmlFor="subcategory">サブカテゴリ</Label>
           <div className="space-y-2">
-            <Select value={subcategoryId} onValueChange={setSubcategoryId}>
+            <Select value={subcategoryId || "none"} onValueChange={(value) => setSubcategoryId(value === "none" ? "" : value)}>
               <SelectTrigger id="subcategory">
                 <SelectValue placeholder="サブカテゴリを選択（任意）" />
               </SelectTrigger>
@@ -424,52 +305,6 @@ export function TransactionForm({
                 ))}
               </SelectContent>
             </Select>
-            
-            {!showNewSubcategory ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowNewSubcategory(true)}
-                className="w-full gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                新しいサブカテゴリを追加
-              </Button>
-            ) : (
-              <div className="flex gap-2">
-                <Input
-                  placeholder="新しいサブカテゴリ名"
-                  value={newSubcategoryName}
-                  onChange={(e) => setNewSubcategoryName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      createNewSubcategory()
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={createNewSubcategory}
-                  disabled={!newSubcategoryName.trim()}
-                >
-                  追加
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setShowNewSubcategory(false)
-                    setNewSubcategoryName('')
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       )}
