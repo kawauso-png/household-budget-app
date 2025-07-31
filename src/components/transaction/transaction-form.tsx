@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { TransactionType, Category, Transaction } from '@/lib/types'
+import { TransactionType, Category, Subcategory, Transaction } from '@/lib/types'
 import { Plus, X } from 'lucide-react'
 
 interface TransactionFormProps {
@@ -36,11 +36,15 @@ export function TransactionForm({
   const [taxType, setTaxType] = useState<TaxType>('tax_included')
   const [finalAmount, setFinalAmount] = useState(editTransaction ? editTransaction.amount.toString() : '')
   const [categoryId, setCategoryId] = useState(editTransaction?.category_id || '')
+  const [subcategoryId, setSubcategoryId] = useState(editTransaction?.subcategory_id || '')
   const [newCategoryName, setNewCategoryName] = useState('')
+  const [newSubcategoryName, setNewSubcategoryName] = useState('')
   const [showNewCategory, setShowNewCategory] = useState(false)
+  const [showNewSubcategory, setShowNewSubcategory] = useState(false)
   const [date, setDate] = useState(editTransaction ? editTransaction.date : format(new Date(), 'yyyy-MM-dd'))
   const [description, setDescription] = useState(editTransaction?.description || '')
   const [categories, setCategories] = useState<Category[]>([])
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
@@ -49,6 +53,15 @@ export function TransactionForm({
   useEffect(() => {
     fetchCategories()
   }, [type])
+
+  useEffect(() => {
+    if (categoryId) {
+      fetchSubcategories(categoryId)
+    } else {
+      setSubcategories([])
+      setSubcategoryId('')
+    }
+  }, [categoryId])
 
   useEffect(() => {
     calculateFinalAmount()
@@ -65,6 +78,20 @@ export function TransactionForm({
       console.error('Error fetching categories:', error)
     } else {
       setCategories(data || [])
+    }
+  }
+
+  const fetchSubcategories = async (selectedCategoryId: string) => {
+    const { data, error } = await supabase
+      .from('subcategories')
+      .select('*')
+      .eq('category_id', selectedCategoryId)
+      .order('name')
+
+    if (error) {
+      console.error('Error fetching subcategories:', error)
+    } else {
+      setSubcategories(data || [])
     }
   }
 
@@ -113,10 +140,7 @@ export function TransactionForm({
 
       if (error) throw error
 
-      // カテゴリ一覧を更新
       await fetchCategories()
-      
-      // 新しく作成したカテゴリを選択
       setCategoryId(data.id)
       setNewCategoryName('')
       setShowNewCategory(false)
@@ -125,11 +149,52 @@ export function TransactionForm({
     }
   }
 
+  const createNewSubcategory = async () => {
+    if (!newSubcategoryName.trim()) {
+      setError('サブカテゴリ名を入力してください')
+      return
+    }
+
+    if (!categoryId) {
+      setError('先にカテゴリを選択してください')
+      return
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('ユーザーが見つかりません')
+
+      const { data, error } = await supabase
+        .from('subcategories')
+        .insert({
+          user_id: user.id,
+          category_id: categoryId,
+          name: newSubcategoryName.trim(),
+          is_default: false,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      await fetchSubcategories(categoryId)
+      setSubcategoryId(data.id)
+      setNewSubcategoryName('')
+      setShowNewSubcategory(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'サブカテゴリの作成に失敗しました')
+    }
+  }
+
+  const handleCategoryChange = (value: string) => {
+    setCategoryId(value)
+    setSubcategoryId('') // カテゴリが変わったらサブカテゴリをリセット
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     
-    // バリデーション
     if (!finalAmount || parseFloat(finalAmount) <= 0) {
       setError('金額を入力してください')
       return
@@ -150,13 +215,13 @@ export function TransactionForm({
       }
 
       if (mode === 'edit' && editTransaction) {
-        // 更新処理
         const { error } = await supabase
           .from('transactions')
           .update({
             type,
             amount: parseFloat(finalAmount),
             category_id: categoryId,
+            subcategory_id: subcategoryId || null,
             date,
             description: description || null,
           })
@@ -164,12 +229,12 @@ export function TransactionForm({
 
         if (error) throw error
       } else {
-        // 新規作成処理
         const { error } = await supabase.from('transactions').insert({
           user_id: user.id,
           type,
           amount: parseFloat(finalAmount),
           category_id: categoryId,
+          subcategory_id: subcategoryId || null,
           date,
           description: description || null,
         })
@@ -181,6 +246,7 @@ export function TransactionForm({
         setFinalAmount('')
         setTaxType('tax_included')
         setCategoryId('')
+        setSubcategoryId('')
         setDescription('')
         setDate(format(new Date(), 'yyyy-MM-dd'))
       }
@@ -271,7 +337,7 @@ export function TransactionForm({
       <div className="space-y-2">
         <Label htmlFor="category">カテゴリ *</Label>
         <div className="space-y-2">
-          <Select value={categoryId} onValueChange={setCategoryId}>
+          <Select value={categoryId} onValueChange={handleCategoryChange}>
             <SelectTrigger id="category">
               <SelectValue placeholder="カテゴリを選択してください" />
             </SelectTrigger>
@@ -331,6 +397,73 @@ export function TransactionForm({
           )}
         </div>
       </div>
+
+      {categoryId && (
+        <div className="space-y-2">
+          <Label htmlFor="subcategory">サブカテゴリ</Label>
+          <div className="space-y-2">
+            <Select value={subcategoryId} onValueChange={setSubcategoryId}>
+              <SelectTrigger id="subcategory">
+                <SelectValue placeholder="サブカテゴリを選択（任意）" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">なし</SelectItem>
+                {subcategories.map((subcategory) => (
+                  <SelectItem key={subcategory.id} value={subcategory.id}>
+                    {subcategory.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {!showNewSubcategory ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowNewSubcategory(true)}
+                className="w-full gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                新しいサブカテゴリを追加
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="新しいサブカテゴリ名"
+                  value={newSubcategoryName}
+                  onChange={(e) => setNewSubcategoryName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      createNewSubcategory()
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={createNewSubcategory}
+                  disabled={!newSubcategoryName.trim()}
+                >
+                  追加
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowNewSubcategory(false)
+                    setNewSubcategoryName('')
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="date">日付</Label>
